@@ -6,6 +6,9 @@
 
 #include "pzip.h"
 
+//my inclusion
+#include "pthread.h"
+
 /**
  * pzip() - zip an array of characters in parallel
  *
@@ -22,10 +25,25 @@
  * NOTE: All outputs are already allocated. DO NOT MALLOC or REASSIGN THEM !!!
  *
  */
+void *
+funky(void *threadid){
+	fprintf(stdout,"thread printed"); 
+	pthread_exit(NULL);
+}
+
+
 void pzip(int n_threads, char *input_chars, int input_chars_size,
 	  struct zipped_char *zipped_chars, int *zipped_chars_count,
 	  int *char_frequency)
 {
-	printf ("TODO: Start from here!\n");
-	exit(1);
+	int nt = input_chars_size/n_threads; 
+	pthread_t threads[n_threads]; 
+	for(int i = 0; i <  nt; ++i){
+		if(pthread_create(&threads[i],NULL,funky,NULL)){
+			fprintf(stderr,"Error: thread creation"); 
+			exit(-1); 
+		} 
+	}
+	
+	exit(0);
 }
