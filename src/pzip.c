@@ -25,9 +25,20 @@
  * NOTE: All outputs are already allocated. DO NOT MALLOC or REASSIGN THEM !!!
  *
  */
-void *
-funky(void *threadid){
-	fprintf(stdout,"thread printed"); 
+
+/*
+struct str {
+	char *  chars; 
+};
+*/
+
+
+static void * 
+func(void *arg){
+	//fprintf(stdout,"thread printed\n"); 
+	char *str = arg; 
+	fprintf(stdout,"%s\n",str); 
+	free(str); 
 	pthread_exit(NULL);
 }
 
@@ -36,14 +47,25 @@ void pzip(int n_threads, char *input_chars, int input_chars_size,
 	  struct zipped_char *zipped_chars, int *zipped_chars_count,
 	  int *char_frequency)
 {
-	int nt = input_chars_size/n_threads; 
+	//barrier init
+	//pthread_barrier_t barrier; 
+	//pthread_barrier_init (&barrier, NULL, 3);
+
+
+	int str_n = input_chars_size/n_threads; 
 	pthread_t threads[n_threads]; 
-	for(int i = 0; i <  nt; ++i){
-		if(pthread_create(&threads[i],NULL,funky,NULL)){
+	for(int i = 0; i <  n_threads; ++i){
+		//string intialization 
+		char * str = malloc(str_n*sizeof(char)); 
+		for(int j = 0; j < str_n; ++j){
+			str[j] = input_chars[i*str_n+j]; 
+		}
+		if(pthread_create(&threads[i],NULL,*func,(void *)str)){
 			fprintf(stderr,"Error: thread creation"); 
 			exit(-1); 
 		} 
 	}
+	pthread_exit(NULL); 
 	
 	exit(0);
 }
