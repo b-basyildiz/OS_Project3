@@ -37,6 +37,18 @@ static void *
 func(void *arg){
 	//fprintf(stdout,"thread printed\n"); 
 	char *str = arg; 
+	int count = 1; 
+	char c;
+	for(int i = 0; i < strlen(str) - 1; ++i){
+		c = str[i];
+		if(str[i] == str[i+1]){
+			count = count + 1; 
+		}else{
+			fprintf(stdout, "%c: %d\n",c,count);
+			count = 1;
+		}
+	}
+	fprintf(stdout, "%c: %d\n",c,count);
 	fprintf(stdout,"%s\n",str); 
 	free(str); 
 	pthread_exit(NULL);
