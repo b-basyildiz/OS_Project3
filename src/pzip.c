@@ -1,3 +1,5 @@
+
+   
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -75,21 +77,12 @@ func(void *arg){
 	thread_arr[tn].z_chars[thread_arr[tn].z_char_n].occurence = count; 
 	thread_arr[tn].z_char_n +=1; 
 	pthread_barrier_wait(&barrier);
-	if(tn == 0){
-		int arr_size = 0;
-		for(int i = 0; i < thread_count; ++i){
-			arr_size += thread_arr[i].z_char_n; 
-		}
-		*zipp_n = arr_size; 
-	}
 	int zchars_i = 0;
 	for(int i = 0; i < tn; ++i){
 		zchars_i += thread_arr[i].z_char_n; 
 	}
-	for(int i = zchars_i; i < zchars_i + thread_arr[tn].z_char_n; ++i){
-		global_chars[i].character = thread_arr[tn].z_chars[i - zchars_i].character;
-		global_chars[i].occurence = thread_arr[tn].z_chars[i - zchars_i].occurence;
-	}
+	
+	memcpy(global_chars+zchars_i,thread_arr[tn].z_chars,thread_arr[tn].z_char_n); 
 
 	//lock mutex
 	for(int i = 0; i <  26; ++i){
@@ -160,9 +153,14 @@ void pzip(int n_threads, char *input_chars, int input_chars_size,
 	} 
 	for(int i = 0; i < 26; ++i){
 		if(pthread_mutex_destroy(&lock[i])){
-		fprintf(stderr,"Error: mutex destruction");
-		exit(-1);
+			fprintf(stderr,"Error: mutex destruction");
+			exit(-1);
+		}
 	}
+
+	*zipp_n = 0; 
+	for(int i = 0; i < thread_count; ++i){
+		*zipp_n += thread_arr[i].z_char_n; 
 	}
 	
 	free(thread_arr); 
