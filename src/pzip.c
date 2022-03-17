@@ -13,9 +13,7 @@
 
 //thread struct
 typedef struct zipped_str {
-	//char *  str; 
 	struct zipped_char *z_chars;
-	//int str_n; 
 	int z_char_n; 
 }zipper;
 
@@ -56,12 +54,9 @@ func(void *arg){
 	long tn = (long)arg;
 	char c;
 	int count = 1;
-	thread_arr[tn].z_chars = (struct zipped_char *) malloc(str_n*sizeof(struct zipped_char));
 	thread_arr[tn].z_char_n = 0;
 	for(int i = str_n*tn; i < str_n*(tn+1)-1; ++i){
-		//c = thread_arr[tn].str[i]; 
 		c = str[i]; 
-		//if(thread_arr[tn].str[i] == thread_arr[tn].str[i+1]){
 		if(str[i] == str[i+1]){
 			count = count + 1; 
 		}else{
@@ -81,8 +76,11 @@ func(void *arg){
 	for(int i = 0; i < tn; ++i){
 		zchars_i += thread_arr[i].z_char_n; 
 	}
-	
-	memcpy(global_chars+zchars_i,thread_arr[tn].z_chars,thread_arr[tn].z_char_n); 
+
+	for(int i = zchars_i; i < zchars_i + thread_arr[tn].z_char_n; ++i){
+		global_chars[i].character = thread_arr[tn].z_chars[i - zchars_i].character;
+		global_chars[i].occurence = thread_arr[tn].z_chars[i - zchars_i].occurence;
+	}
 
 	//lock mutex
 	for(int i = 0; i <  26; ++i){
@@ -133,9 +131,8 @@ void pzip(int n_threads, char *input_chars, int input_chars_size,
 	str_n = input_chars_size/n_threads; 
 	thread_arr = (zipper *)malloc(n_threads*sizeof(zipper)); 
 	for(long i = 0; i <  n_threads; ++i){
-		//thread_arr[i].str = input_chars;
-		//str_n = input_chars_size/n_threads; 
-
+		thread_arr[i].z_chars = (struct zipped_char *) malloc(str_n*sizeof(struct zipped_char));
+		
 		if(pthread_create(&threads[i],NULL,*func,(void *)i)){
 			fprintf(stderr,"Error: thread creation"); 
 			exit(-1); 
