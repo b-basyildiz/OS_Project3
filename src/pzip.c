@@ -11,20 +11,22 @@
 
 //thread struct
 typedef struct zipped_str {
-	char *  str; 
+	//char *  str; 
 	struct zipped_char *z_chars;
-	int str_n; 
+	//int str_n; 
 	int z_char_n; 
 }zipper;
 
 //global variables 
 pthread_barrier_t barrier; 
-int glob_cfreq[26] = {0}; 
+int * glob_cfreq;
 zipper * thread_arr; 
 struct zipped_char *global_chars; 
 pthread_mutex_t lock; 
 int thread_count;
 int *zipp_n;
+int str_n;
+char * str;
 
 
 /**
@@ -51,14 +53,15 @@ func(void *arg){
 	long tn = (long)arg;
 	char c;
 	int count = 1;
-	thread_arr[tn].z_chars = (struct zipped_char *) malloc(thread_arr[tn].str_n*sizeof(struct zipped_char));
+	thread_arr[tn].z_chars = (struct zipped_char *) malloc(str_n*sizeof(struct zipped_char));
 	thread_arr[tn].z_char_n = 0;
-	for(int i = thread_arr[tn].str_n*tn; i < thread_arr[tn].str_n*(tn+1)-1; ++i){
-		c = thread_arr[tn].str[i]; 
-		if(thread_arr[tn].str[i] == thread_arr[tn].str[i+1]){
+	for(int i = str_n*tn; i < str_n*(tn+1)-1; ++i){
+		//c = thread_arr[tn].str[i]; 
+		c = str[i]; 
+		//if(thread_arr[tn].str[i] == thread_arr[tn].str[i+1]){
+		if(str[i] == str[i+1]){
 			count = count + 1; 
 		}else{
-			//fprintf(stdout, "%c: %d\n",c,count);
 			temp_cfreq[c - 97] += count; 
 			thread_arr[tn].z_chars[thread_arr[tn].z_char_n].character = c;
 			thread_arr[tn].z_chars[thread_arr[tn].z_char_n].occurence = count; 
@@ -66,32 +69,25 @@ func(void *arg){
 			count = 1;
 		}
 	}
-	//fprintf(stdout, "%c: %d\n\n",c,count);
 	temp_cfreq[c - 97] += count;  
 	thread_arr[tn].z_chars[thread_arr[tn].z_char_n].character = c;
 	thread_arr[tn].z_chars[thread_arr[tn].z_char_n].occurence = count; 
 	thread_arr[tn].z_char_n +=1; 
 	pthread_barrier_wait(&barrier);
-	//segmentation fault happens when this array isn't allocate before it is accessed
 	if(tn == 0){
 		int arr_size = 0;
 		for(int i = 0; i < thread_count; ++i){
 			arr_size += thread_arr[i].z_char_n; 
 		}
-		zipp_n = (int *)malloc(sizeof(int)); 
 		*zipp_n = arr_size; 
-		global_chars = (struct zipped_char * )malloc(arr_size*sizeof(struct zipped_char));
 	}
-	pthread_barrier_wait(&barrier);
 	int zchars_i = 0;
 	for(int i = 0; i < tn; ++i){
 		zchars_i += thread_arr[i].z_char_n; 
 	}
-	//fprintf(stdout,"%d\n",zchars_i);
 	for(int i = zchars_i; i < zchars_i + thread_arr[tn].z_char_n; ++i){
 		global_chars[i].character = thread_arr[tn].z_chars[i - zchars_i].character;
 		global_chars[i].occurence = thread_arr[tn].z_chars[i - zchars_i].occurence;
-		//fprintf(stdout,"%c: %d\n",global_chars[i].character,global_chars[i].occurence);
 	}
 
 	//lock mutex
@@ -119,6 +115,11 @@ void pzip(int n_threads, char *input_chars, int input_chars_size,
 	  struct zipped_char *zipped_chars, int *zipped_chars_count,
 	  int *char_frequency)
 {
+	//global stuff
+	global_chars = zipped_chars;
+	glob_cfreq = char_frequency;
+	zipp_n = zipped_chars_count; 
+	str = input_chars;
 	//init
 	if(pthread_barrier_init (&barrier, NULL, n_threads)){
 		fprintf(stderr,"Error: barier initialization");
@@ -132,10 +133,11 @@ void pzip(int n_threads, char *input_chars, int input_chars_size,
 
 	thread_count = n_threads; 
 	pthread_t threads[n_threads]; 
+	str_n = input_chars_size/n_threads; 
 	thread_arr = (zipper *)malloc(n_threads*sizeof(zipper)); 
 	for(long i = 0; i <  n_threads; ++i){
-		thread_arr[i].str = input_chars;
-		thread_arr[i].str_n = input_chars_size/n_threads; 
+		//thread_arr[i].str = input_chars;
+		//str_n = input_chars_size/n_threads; 
 
 		if(pthread_create(&threads[i],NULL,*func,(void *)i)){
 			fprintf(stderr,"Error: thread creation"); 
@@ -156,10 +158,6 @@ void pzip(int n_threads, char *input_chars, int input_chars_size,
 		fprintf(stderr,"Error: mutex destruction");
 		exit(-1);
 	}
-
-	zipped_chars = global_chars;
-	char_frequency = glob_cfreq;
-	zipped_chars_count = zipp_n;
+	
 	free(thread_arr); 
-	exit(0);
 }
