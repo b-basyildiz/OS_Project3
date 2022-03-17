@@ -12,7 +12,10 @@
 //global variables 
 pthread_barrier_t barrier; 
 int glob_cfreq[26] = {0}; 
-struct temp_zchar *zipped_chars;
+zipper * thread_arr; 
+//make global zipped_char
+pthread_mutex_t lock; 
+
 
 /**
  * pzip() - zip an array of characters in parallel
@@ -34,33 +37,59 @@ struct temp_zchar *zipped_chars;
 
 typedef struct zipped_str {
 	char *  str; 
-	int index; 
+	struct zipped_char *z_chars;
+	int str_n; 
+	int z_char_n; 
 }zipper;
 
-
+typedef struct index_zipp {
+	zipper * zipped; 
+	int t_i; 
+}i_zipp;
 
 static void * 
 func(void *arg){
 	int temp_cfreq[26] = {0};
-	zipper *zipp = (zipper *) arg; 
-	int count = 1; 
+	int z = (int)arg;
+	i_zipp *z = (i_zipp *) arg; 
+	z->zipped->z_char_n = 0;
+	char * str = z->zipped->str;
+	struct zipped_char *zipped_chars = z->zipped->z_chars; 
+	int n = z->zipped->str_n; 
+	int tn = z->t_i; 
 	char c;
-	fprintf(stdout,"%s: %d\n", zipp->str,zipp->index); 
-	for(int i = 0; i < strlen(zipp->str) - 1; ++i){
-		c = zipp->str[i];
-		if(zipp->str[i] == zipp->str[i+1]){
+	int count = 1;
+	int str_n = z->zipped->str_n;
+	zipped_chars = (struct zipped_char *) malloc(str_n*sizeof(struct zipped_char));
+	int j = 0;
+	for(int i = n*tn; i < n*(tn+1)-1; ++i){
+		c = str[i]; 
+		if(str[i] == str[i+1]){
 			count = count + 1; 
 		}else{
 			fprintf(stdout, "%c: %d\n",c,count);
 			temp_cfreq[c - 97] += count; 
+			zipped_chars[j].character = c;
+			zipped_chars[j].occurence = count; 
+			j += 1;
 			count = 1;
 		}
 	}
-
+	fprintf(stdout, "%c: %d\n\n",c,count);
+	temp_cfreq[c - 97] += count;  
+	zipped_chars[j].character = c;
+	zipped_chars[j].occurence = count; 
+	z->zipped->z_char_n = j;
 	pthread_barrier_wait(&barrier); 
-	fprintf(stdout, "%c: %d\n\n",c,count); 
-	free(zipp->str); 
-	free(zipp); 
+	//sum all the previous threads character occurences 
+	// and then put your zippde characters 
+
+	//lock mutex
+	//combine arrays 
+	//unlock
+	
+
+	free(z); 
 	pthread_exit(NULL);
 }
 
@@ -69,31 +98,33 @@ void pzip(int n_threads, char *input_chars, int input_chars_size,
 	  struct zipped_char *zipped_chars, int *zipped_chars_count,
 	  int *char_frequency)
 {
-	//barrier init
+	//init
 	pthread_barrier_init (&barrier, NULL, n_threads);
+	pthread_mutex_init(&lock,NULL); 
 
 	//struct zipped_char * zipped_chars_2 = (struct zipped_char *) malloc(input_chars_size*sizeof(struct zipped_char)); 
 	void *tret; 
-	int str_n = input_chars_size/n_threads; 
+	zipper* zipp = (zipper *)malloc(sizeof(zipper)); 
+	zipp->str = input_chars; 
+	//zipp->z_chars = zipped_chars;
+	zipp->str_n = input_chars_size/n_threads; 
+
+	i_zipp* zi = (i_zipp *)malloc(sizeof(i_zipp)); 
+	zi->zipped = zipp; 
+
 	pthread_t threads[n_threads]; 
+	thread_arr = (zipper *)malloc(n_threads*sizeof(zipper)); 
 	for(int i = 0; i <  n_threads; ++i){
-		//string intialization 
-		char * str = (char *) malloc(str_n*sizeof(char)); 
-		int *index = malloc(sizeof(int)); 
-		*index = 1;
-		char temp_c = input_chars[0]; 
-		str[0] = input_chars[i*str_n]; 
-		for(int j = 1; j < str_n; ++j){
-			str[j] = input_chars[i*str_n+j]; 
-			if(temp_c !=str[j]){
-				*index +=1; 
-				temp_c = str[j]; 
-			}
-		}
-		zipper* zipp = (zipper *)malloc(sizeof(zipper)); 
-		zipp->str = str; 
-		zipp->index = *index;
-		if(pthread_create(&threads[i],NULL,*func,(void *)zipp)){
+		//string intialization
+		/*
+		i_zipp* zi = (i_zipp *)malloc(sizeof(i_zipp)); 
+		zi->zipped = zipp; 
+		zi->t_i = i; 
+		*/
+
+		//assign all things for zipp TODO
+		thread_arr[i]
+		if(pthread_create(&threads[i],NULL,*func,(void *)i)){
 			fprintf(stderr,"Error: thread creation"); 
 			exit(-1); 
 		} 
@@ -104,7 +135,7 @@ void pzip(int n_threads, char *input_chars, int input_chars_size,
 		}
 	}
 	pthread_barrier_destroy (&barrier); 
-	pthread_exit(NULL); 
+	pthread_mutex_destroy(&lock); 
 
 	/*
 	for(int i = 0; i < 2; ++i){
@@ -112,6 +143,6 @@ void pzip(int n_threads, char *input_chars, int input_chars_size,
 	}
 	*/
 	//free(zipped_chars_2); 
-	
+	free(zipp); 
 	exit(0);
 }
