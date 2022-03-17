@@ -22,11 +22,12 @@ pthread_barrier_t barrier;
 int * glob_cfreq;
 zipper * thread_arr; 
 struct zipped_char *global_chars; 
-pthread_mutex_t lock; 
+pthread_mutex_t lock[26]; 
 int thread_count;
 int *zipp_n;
 int str_n;
 char * str;
+//TODO creaeete mutex lock array
 
 
 /**
@@ -91,20 +92,21 @@ func(void *arg){
 	}
 
 	//lock mutex
-	if(pthread_mutex_lock(&lock)){
-		fprintf(stderr,"Error: mutex locking");
-		exit(-1);
-	}
 	for(int i = 0; i <  26; ++i){
 		if(temp_cfreq[i] != 0){
+			if(pthread_mutex_lock(&lock[i])){
+				fprintf(stderr,"Error: mutex locking");
+				exit(-1);
+			}
 			glob_cfreq[i] += temp_cfreq[i];
+
+			if(pthread_mutex_unlock(&lock[i])){
+				fprintf(stderr,"Error: mutex unlocking"); 
+				exit(-1);
+			}
 		}
 	}
 
-	if(pthread_mutex_unlock(&lock)){
-		fprintf(stderr,"Error: mutex unlocking"); 
-		exit(-1);
-	}
 	
 	free(thread_arr[tn].z_chars); 
 	pthread_exit(NULL);
@@ -125,9 +127,11 @@ void pzip(int n_threads, char *input_chars, int input_chars_size,
 		fprintf(stderr,"Error: barier initialization");
 		exit(-1);
 	}
-	if(pthread_mutex_init(&lock,NULL)){
-		fprintf(stderr,"Error: mutex initialization"); 
-		exit(-1);
+	for(int i = 0; i < 26; ++i){
+		if(pthread_mutex_init(&lock[i],NULL)){
+			fprintf(stderr,"Error: mutex initialization"); 
+			exit(-1);
+		}
 	}
 	void *tret; 
 
@@ -154,9 +158,11 @@ void pzip(int n_threads, char *input_chars, int input_chars_size,
 		fprintf(stderr,"Error: barrier destruction");
 		exit(-1);
 	} 
-	if(pthread_mutex_destroy(&lock)){
+	for(int i = 0; i < 26; ++i){
+		if(pthread_mutex_destroy(&lock[i])){
 		fprintf(stderr,"Error: mutex destruction");
 		exit(-1);
+	}
 	}
 	
 	free(thread_arr); 
